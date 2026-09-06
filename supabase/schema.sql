@@ -1,12 +1,13 @@
 -- ==============================================================================
--- PHOTO & GEOLOCATION ATTENDANCE MANAGEMENT SYSTEM
--- PostgreSQL / Supabase Schema Definition
+-- GEOATTEND - PHOTO & GEOLOCATION ATTENDANCE MANAGEMENT SYSTEM
+-- Complete PostgreSQL / Supabase Schema Definition
+-- Run this entire script in your Supabase SQL Editor: Dashboard > SQL Editor > New query
 -- ==============================================================================
 
--- Enable UUID extension
+-- 1. Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Create Custom Enum Types
+-- 2. Custom ENUM Types
 DO $$ BEGIN
     CREATE TYPE user_role AS ENUM ('SUPER_ADMIN', 'PROJECT_MANAGER');
 EXCEPTION
@@ -31,27 +32,31 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- 2. Projects Table
+-- 3. Projects Table (Sites with GPS Centroids & Geofence Radius)
 CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     code TEXT NOT NULL UNIQUE,
+    client_name TEXT,
+    description TEXT,
     target_latitude NUMERIC(10, 7),
     target_longitude NUMERIC(10, 7),
     geofence_radius_meters INTEGER NOT NULL DEFAULT 200,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 3. Users Table (Linked with Supabase Auth or standalone app users)
+-- 4. Users Table (Super Admins and Site Supervisors)
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL DEFAULT 'admin123',
     role user_role NOT NULL DEFAULT 'PROJECT_MANAGER',
     project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+    full_name TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 4. Employees Table
+-- 5. Employees Table (Registered Workforce)
 CREATE TABLE IF NOT EXISTS employees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -66,7 +71,7 @@ CREATE TABLE IF NOT EXISTS employees (
     CONSTRAINT unique_iqama_per_project UNIQUE (project_id, iqama_number)
 );
 
--- 5. Attendance Logs Table
+-- 6. Attendance Logs Table (Punches with Photo & Live GPS)
 CREATE TABLE IF NOT EXISTS attendance_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
@@ -80,35 +85,80 @@ CREATE TABLE IF NOT EXISTS attendance_logs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 6. Indexes for High Performance Queries
+-- 7. High-Performance Query Indexes
+CREATE INDEX IF NOT EXISTS idx_projects_code ON projects(code);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_project_id ON users(project_id);
 CREATE INDEX IF NOT EXISTS idx_employees_project_id ON employees(project_id);
 CREATE INDEX IF NOT EXISTS idx_employees_iqama ON employees(iqama_number);
 CREATE INDEX IF NOT EXISTS idx_attendance_project_date ON attendance_logs(project_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_attendance_employee ON attendance_logs(employee_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_timestamp ON attendance_logs(timestamp DESC);
 
--- 7. Supabase Storage Buckets (Run in Supabase Storage setup or SQL Editor)
+-- 8. Row Level Security (RLS) - Permissive for Web Application Client
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_logs ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+    CREATE POLICY "Allow public read-write on projects" ON projects FOR ALL USING (true) WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE POLICY "Allow public read-write on users" ON users FOR ALL USING (true) WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE POLICY "Allow public read-write on employees" ON employees FOR ALL USING (true) WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE POLICY "Allow public read-write on attendance_logs" ON attendance_logs FOR ALL USING (true) WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- 9. Storage Buckets (For Iqama Documents, Facial References, Punch Snapshots)
 INSERT INTO storage.buckets (id, name, public) 
 VALUES 
     ('iqama-documents', 'iqama-documents', true),
     ('reference-photos', 'reference-photos', true),
     ('attendance-snapshots', 'attendance-snapshots', true)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET public = true;
 
--- Storage RLS: Allow authenticated and public read/write for these buckets in prototype
-CREATE POLICY "Public Read Iqama" ON storage.objects FOR SELECT USING (bucket_id = 'iqama-documents');
-CREATE POLICY "Public Upload Iqama" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'iqama-documents');
+-- Storage RLS: Public Read & Upload Access
+DO $$ BEGIN
+    CREATE POLICY "Public Read Iqama" ON storage.objects FOR SELECT USING (bucket_id = 'iqama-documents');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
-CREATE POLICY "Public Read Reference Photos" ON storage.objects FOR SELECT USING (bucket_id = 'reference-photos');
-CREATE POLICY "Public Upload Reference Photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'reference-photos');
+DO $$ BEGIN
+    CREATE POLICY "Public Upload Iqama" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'iqama-documents');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
-CREATE POLICY "Public Read Attendance Snapshots" ON storage.objects FOR SELECT USING (bucket_id = 'attendance-snapshots');
-CREATE POLICY "Public Upload Attendance Snapshots" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'attendance-snapshots');
+DO $$ BEGIN
+    CREATE POLICY "Public Read Reference Photos" ON storage.objects FOR SELECT USING (bucket_id = 'reference-photos');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
--- 8. Seed Initial Default Data (Demo Projects)
-INSERT INTO projects (id, name, code, target_latitude, target_longitude, geofence_radius_meters)
-VALUES 
-    ('11111111-1111-1111-1111-111111111111', 'Red Sea Coastal Expressway - Sector 4', 'PRJ-RSC-04', 24.7135520, 46.6752960, 250),
-    ('22222222-2222-2222-2222-222222222222', 'Riyadh Metro Line 3 Extension Hub', 'PRJ-RML-03', 24.7742650, 46.7385860, 200),
-    ('33333333-3333-3333-3333-333333333333', 'NEOM Gateway Commercial Tower', 'PRJ-NEO-01', 28.0058700, 35.2104500, 300)
-ON CONFLICT (id) DO NOTHING;
+DO $$ BEGIN
+    CREATE POLICY "Public Upload Reference Photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'reference-photos');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE POLICY "Public Read Attendance Snapshots" ON storage.objects FOR SELECT USING (bucket_id = 'attendance-snapshots');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE POLICY "Public Upload Attendance Snapshots" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'attendance-snapshots');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- 10. Initial Clean Super Admin Account
+-- This allows you to log in on first launch and create your real projects.
+INSERT INTO users (id, email, password, role, project_id, full_name)
+VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    'admin@buildcorp.global',
+    'admin123',
+    'SUPER_ADMIN',
+    NULL,
+    'System Administrator'
+)
+ON CONFLICT (email) DO NOTHING;
