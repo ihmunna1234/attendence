@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, Project, UserRole } from './types';
-import { getProjects, getUsers, authenticateUser, resetToDemoData } from './db';
+import { getProjects, getUsers, authenticateUser, authenticateProjectSupervisor, resetToDemoData } from './db';
 
 interface AuthContextType {
   user: User | null;
@@ -11,7 +11,8 @@ interface AuthContextType {
   activeProject: Project | null;
   projects: Project[];
   allUsers: User[];
-  login: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  login: (emailOrCode: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithProject: (projectId: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   loginAsPreset: (userId: string) => void;
   logout: () => void;
   setActiveProject: (project: Project | null) => void;
@@ -87,6 +88,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: true };
   };
 
+  const loginWithProject = async (projectId: string, password?: string): Promise<{ success: boolean; error?: string }> => {
+    const authenticated = authenticateProjectSupervisor(projectId, password);
+    if (!authenticated) {
+      return { success: false, error: 'Invalid supervisor password for this project site.' };
+    }
+
+    setUser(authenticated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(AUTH_STORAGE_KEY, authenticated.id);
+    }
+
+    const prjs = getProjects();
+    const p = prjs.find((x) => x.id === projectId);
+    setActiveProject(p || prjs[0] || null);
+
+    return { success: true };
+  };
+
   const loginAsPreset = (userId: string) => {
     const usrs = getUsers();
     const target = usrs.find((u) => u.id === userId);
@@ -146,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         projects,
         allUsers,
         login,
+        loginWithProject,
         loginAsPreset,
         logout,
         setActiveProject: handleSetActiveProject,

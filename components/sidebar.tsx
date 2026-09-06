@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import {
   LayoutDashboard,
-  Camera,
+  UserCheck,
   CalendarCheck2,
   Users,
   Building2,
@@ -33,7 +33,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
     {
       label: 'Daily Attendance Kiosk',
       href: '/attendance',
-      icon: Camera,
+      icon: UserCheck,
       badge: 'Live GPS',
       // Strictly for site supervisors on-site!
       roles: ['PROJECT_MANAGER'],

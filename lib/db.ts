@@ -102,19 +102,44 @@ export function createUser(data: Omit<User, 'id' | 'created_at'>): User {
   return newUser;
 }
 
-export function authenticateUser(email: string, password?: string): User | null {
+export function authenticateUser(identifier: string, password?: string): User | null {
   const users = getUsers();
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedId = identifier.trim().toLowerCase();
   
-  const user = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+  // 1. Check exact email match
+  let user = users.find((u) => u.email.toLowerCase() === normalizedId);
+
+  // 2. If not found by email, check if identifier is a Project Code or Project ID
+  if (!user) {
+    const projects = getProjects();
+    const matchedProject = projects.find(
+      (p) => p.code.toLowerCase() === normalizedId || p.id === identifier.trim()
+    );
+    if (matchedProject) {
+      user = users.find((u) => u.project_id === matchedProject.id && u.role === 'PROJECT_MANAGER');
+    }
+  }
+
   if (!user) return null;
 
-  // If password provided and user has password, check match (or demo bypass)
+  // Validate password
   if (password && user.password && user.password !== password.trim()) {
     return null;
   }
 
   return user;
+}
+
+export function authenticateProjectSupervisor(projectId: string, password?: string): User | null {
+  const users = getUsers();
+  const supervisor = users.find((u) => u.project_id === projectId && u.role === 'PROJECT_MANAGER');
+  if (!supervisor) return null;
+
+  if (password && supervisor.password && supervisor.password !== password.trim()) {
+    return null;
+  }
+
+  return supervisor;
 }
 
 /* ==================== EMPLOYEES ==================== */

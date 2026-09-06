@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { z } from 'zod';
 import { Modal } from '@/components/ui/modal';
 import { Project } from '@/lib/types';
-import { createProject, updateProject, createUser } from '@/lib/db';
+import { createProject, updateProject, createUser, getUsers } from '@/lib/db';
 import { Building2, MapPin, AlertCircle, KeyRound, Mail } from 'lucide-react';
 
 const GeofenceMapPicker = dynamic(
@@ -132,6 +132,31 @@ export function ProjectManagementModal({
           client_name: clientName.trim() || undefined,
           description: description.trim() || undefined,
         });
+
+        // Update or create supervisor password if specified
+        if (supervisorPassword.trim()) {
+          const allUsers = getUsers();
+          const existingSupervisor = allUsers.find(
+            (u) => u.project_id === projectToEdit.id && u.role === 'PROJECT_MANAGER'
+          );
+          if (existingSupervisor) {
+            existingSupervisor.password = supervisorPassword.trim();
+            if (supervisorEmail.trim()) {
+              existingSupervisor.email = supervisorEmail.trim().toLowerCase();
+            }
+          } else {
+            const effectiveEmail = supervisorEmail.trim()
+              ? supervisorEmail.trim().toLowerCase()
+              : `supervisor.${projectToEdit.code.toLowerCase().replace(/[^a-z0-9]/g, '')}@buildcorp.global`;
+            createUser({
+              email: effectiveEmail,
+              password: supervisorPassword.trim(),
+              role: 'PROJECT_MANAGER',
+              project_id: projectToEdit.id,
+              full_name: `Eng. Supervisor (${name})`,
+            });
+          }
+        }
       } else {
         const created = createProject({
           name: name.trim(),
@@ -143,16 +168,18 @@ export function ProjectManagementModal({
           description: description.trim() || undefined,
         });
 
-        // Create dedicated supervisor account for this specific project
-        if (supervisorEmail) {
-          createUser({
-            email: supervisorEmail.trim().toLowerCase(),
-            password: supervisorPassword.trim() || 'supervisor123',
-            role: 'PROJECT_MANAGER',
-            project_id: created.id,
-            full_name: `Eng. Supervisor (${name})`,
-          });
-        }
+        // Always provision dedicated supervisor account for project login
+        const effectiveEmail = supervisorEmail.trim()
+          ? supervisorEmail.trim().toLowerCase()
+          : `supervisor.${created.code.toLowerCase().replace(/[^a-z0-9]/g, '')}@buildcorp.global`;
+
+        createUser({
+          email: effectiveEmail,
+          password: supervisorPassword.trim() || 'supervisor123',
+          role: 'PROJECT_MANAGER',
+          project_id: created.id,
+          full_name: `Eng. Supervisor (${name})`,
+        });
       }
 
       onSuccess();

@@ -9,7 +9,7 @@ import { Sidebar } from '@/components/sidebar';
 import { LoginView } from '@/components/auth/login-view';
 import {
   LayoutDashboard,
-  Camera,
+  UserCheck,
   CalendarCheck2,
   Users,
   Building2,
@@ -28,7 +28,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     role === 'PROJECT_MANAGER'
       ? [
           { label: 'Overview', href: '/', icon: LayoutDashboard },
-          { label: 'Kiosk', href: '/attendance', icon: Camera, primary: true },
+          { label: 'Attendance', href: '/attendance', icon: UserCheck, primary: true },
           { label: 'Timesheet', href: '/timesheet', icon: CalendarCheck2 },
           { label: 'Workers', href: '/employees', icon: Users },
         ]
