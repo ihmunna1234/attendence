@@ -14,11 +14,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 
-interface NavbarProps {
-  onToggleMobileSidebar?: () => void;
-}
-
-export function Navbar({ onToggleMobileSidebar }: NavbarProps) {
+export function Navbar() {
   const { user, role, activeProject, projects, setActiveProject, logout } = useAuth();
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -26,17 +22,8 @@ export function Navbar({ onToggleMobileSidebar }: NavbarProps) {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
       <div className="flex h-16 items-center justify-between px-4 sm:px-6">
-        {/* Brand & Mobile Hamburger */}
+        {/* Brand */}
         <div className="flex items-center gap-3">
-          {onToggleMobileSidebar && (
-            <button
-              onClick={onToggleMobileSidebar}
-              className="md:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100"
-              aria-label="Toggle Navigation"
-            >
-              <Layers className="w-5 h-5" />
-            </button>
-          )}
 
           <div className="flex items-center gap-2.5">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">

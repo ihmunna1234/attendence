@@ -17,7 +17,6 @@ import {
 
 function ShellContent({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, role } = useAuth();
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const pathname = usePathname();
 
   if (!isAuthenticated) {
@@ -41,28 +40,15 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 pb-16 md:pb-0">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 pb-20 md:pb-0">
       {/* Top Sticky Navigation */}
-      <Navbar onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
+      <Navbar />
 
       <div className="flex-1 flex w-full">
-        {/* Desktop Persistent Sidebar */}
+        {/* Desktop Persistent Sidebar (Only shown on md: and larger screens) */}
         <div className="hidden md:block">
           <Sidebar />
         </div>
-
-        {/* Mobile Overlay Sidebar */}
-        {mobileSidebarOpen && (
-          <div className="fixed inset-0 z-50 md:hidden flex">
-            <div
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
-              onClick={() => setMobileSidebarOpen(false)}
-            />
-            <div className="relative w-72 bg-white h-full shadow-2xl z-10 animate-in slide-in-from-left duration-200">
-              <Sidebar onCloseMobile={() => setMobileSidebarOpen(false)} />
-            </div>
-          </div>
-        )}
 
         {/* Main Content Area */}
         <main className="flex-1 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto w-full min-w-0">
