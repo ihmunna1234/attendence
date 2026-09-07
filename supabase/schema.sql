@@ -82,8 +82,16 @@ CREATE TABLE IF NOT EXISTS attendance_logs (
     latitude NUMERIC(10, 7),
     longitude NUMERIC(10, 7),
     location_status location_status_enum NOT NULL DEFAULT 'WITHIN_GEOFENCE',
+    regular_hours NUMERIC(4, 2) NOT NULL DEFAULT 10.00,
+    overtime_hours NUMERIC(4, 2) NOT NULL DEFAULT 0.00,
+    notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Migration support for existing databases
+ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS regular_hours NUMERIC(4, 2) NOT NULL DEFAULT 10.00;
+ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS overtime_hours NUMERIC(4, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS notes TEXT;
 
 -- 7. High-Performance Query Indexes
 CREATE INDEX IF NOT EXISTS idx_projects_code ON projects(code);
