@@ -139,33 +139,6 @@ export function LoginView() {
               Fast, frictionless access designed for mobile construction foremen and central headquarters administrators.
             </p>
           </div>
-
-          {/* Quick Pillars */}
-          <div className="space-y-2.5 pt-1">
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-200 shadow-sm text-xs">
-              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
-                <KeyRound className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="font-bold text-slate-800 block">Single-Key Login</span>
-                <span className="text-slate-500 text-[11px]">
-                  Type your master admin key or site key to enter instantly.
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-200 shadow-sm text-xs">
-              <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0">
-                <MapPin className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="font-bold text-slate-800 block">GPS Perimeter Verification</span>
-                <span className="text-slate-500 text-[11px]">
-                  Haversine geofence checking on live device sensors.
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right Single-Box Login Card (7 cols) */}
