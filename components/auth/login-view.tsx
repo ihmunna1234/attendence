@@ -2,71 +2,79 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { getAdminMasterKey, setAdminMasterKey } from '@/lib/auth-config';
+import { Modal } from '@/components/ui/modal';
 import {
   ShieldCheck,
   Building2,
   Lock,
-  Mail,
   ArrowRight,
   AlertCircle,
   MapPin,
   Eye,
   EyeOff,
-  UserCheck,
   KeyRound,
+  CheckCircle2,
+  Settings2,
+  Sparkles,
+  HelpCircle,
 } from 'lucide-react';
 
 export function LoginView() {
-  const { login, loginWithProject, projects } = useAuth();
+  const { loginWithPasscode, login, projects } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'PROJECT' | 'ADMIN'>('PROJECT');
-
-  // Project Site Login state
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(
-    projects.length > 0 ? projects[0].id : ''
-  );
-  const [projectPassword, setProjectPassword] = useState('');
-
-  // Super Admin / Email Login state
-  const [email, setEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-
-  // Common state
+  // Smart Passcode (Option 5) State
+  const [passcode, setPasscode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Handle Project Supervisor Login
-  const handleProjectLogin = async (e: React.FormEvent) => {
+  // Email / Classic login toggle
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
+  const [email, setEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+
+  // Change Admin Key Modal
+  const [isChangeKeyOpen, setIsChangeKeyOpen] = useState(false);
+  const [currentKeyInput, setCurrentKeyInput] = useState('');
+  const [newKeyInput, setNewKeyInput] = useState('');
+  const [changeKeyError, setChangeKeyError] = useState<string | null>(null);
+  const [changeKeySuccess, setChangeKeySuccess] = useState<string | null>(null);
+
+  // Handle Smart Key Submit
+  const handlePasscodeLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
 
-    if (!selectedProjectId) {
-      setError('Please select a construction project site.');
+    const clean = passcode.trim();
+    if (!clean) {
+      setError('Please enter your site passcode or admin master key.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await loginWithProject(selectedProjectId, projectPassword);
+      const res = await loginWithPasscode(clean);
       if (!res.success) {
-        setError(res.error || 'Invalid supervisor password for this project.');
+        setError(res.error || 'Invalid access key. Please check your credentials.');
       }
     } catch {
-      setError('An error occurred during project sign-in.');
+      setError('An error occurred during authentication.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle Admin / Email Login
+  // Handle Classic Email Login
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const res = await login(email, adminPassword);
+      const res = await login(email, emailPassword);
       if (!res.success) {
         setError(res.error || 'Invalid email or password.');
       }
@@ -77,13 +85,40 @@ export function LoginView() {
     }
   };
 
+  // Handle Changing Master Admin Key
+  const handleChangeAdminKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangeKeyError(null);
+    setChangeKeySuccess(null);
+
+    const activeMasterKey = getAdminMasterKey();
+    if (currentKeyInput.trim() !== activeMasterKey) {
+      setChangeKeyError('Current Admin Master Key is incorrect.');
+      return;
+    }
+
+    if (!newKeyInput.trim() || newKeyInput.trim().length < 4) {
+      setChangeKeyError('New key must be at least 4 characters long.');
+      return;
+    }
+
+    setAdminMasterKey(newKeyInput.trim());
+    setChangeKeySuccess('Master key updated successfully! You can now use your new key.');
+    setTimeout(() => {
+      setIsChangeKeyOpen(false);
+      setCurrentKeyInput('');
+      setNewKeyInput('');
+      setChangeKeySuccess(null);
+    }, 1500);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-slate-100 flex items-center justify-center p-4 sm:p-6 text-slate-900">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 text-slate-900">
       <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-        {/* Left Brand Showcase Column (5 cols) */}
+        {/* Left Brand Showcase (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25">
+            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/25">
               <ShieldCheck className="w-7 h-7" />
             </div>
             <div>
@@ -91,240 +126,288 @@ export function LoginView() {
                 GeoAttend
               </h1>
               <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">
-                Photo & GPS Intelligence
+                Smart Workforce Portal
               </span>
             </div>
           </div>
 
           <div className="space-y-3">
             <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800 leading-tight">
-              Enterprise Attendance & Geofence Verification Portal
+              One-Key Smart Attendance & Geofence System
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Secure role-based authentication protecting project site perimeters with live biometric facial verification and Haversine GPS audits.
+              Fast, frictionless access designed for mobile construction foremen and central headquarters administrators.
             </p>
           </div>
 
-          {/* Key Security Pillars */}
-          <div className="space-y-2.5 pt-2">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200/80 shadow-sm text-xs">
-              <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
-                <Building2 className="w-4 h-4" />
+          {/* Quick Pillars */}
+          <div className="space-y-2.5 pt-1">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-200 shadow-sm text-xs">
+              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
+                <KeyRound className="w-4 h-4" />
               </div>
               <div>
-                <span className="font-bold text-slate-800 block">Project-Wise Isolation</span>
-                <span className="text-slate-500 text-[11px]">Site supervisors access only their assigned construction site.</span>
+                <span className="font-bold text-slate-800 block">Single-Key Login</span>
+                <span className="text-slate-500 text-[11px]">
+                  Type your master admin key or site key to enter instantly.
+                </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200/80 shadow-sm text-xs">
-              <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-200 shadow-sm text-xs">
+              <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0">
                 <MapPin className="w-4 h-4" />
               </div>
               <div>
-                <span className="font-bold text-slate-800 block">Haversine GPS Perimeter</span>
-                <span className="text-slate-500 text-[11px]">Live sensor validation with custom geofence radii.</span>
+                <span className="font-bold text-slate-800 block">GPS Perimeter Verification</span>
+                <span className="text-slate-500 text-[11px]">
+                  Haversine geofence checking on live device sensors.
+                </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Login Card Column (7 cols) */}
-        <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/60 p-6 sm:p-8 space-y-6">
+        {/* Right Single-Box Login Card (7 cols) */}
+        <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6">
           {/* Header */}
-          <div className="space-y-1">
-            <h3 className="text-lg font-black text-slate-900 tracking-tight">
-              Sign In to Your Workspace
-            </h3>
-            <p className="text-xs text-slate-500">
-              Select your login method: Project Site Supervisor or Super Administrator.
-            </p>
-          </div>
-
-          {/* Login Mode Selector Tabs */}
-          <div className="grid grid-cols-2 p-1 rounded-2xl bg-slate-100 border border-slate-200/80 text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('PROJECT');
-                setError(null);
-              }}
-              className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-2 ${
-                activeTab === 'PROJECT'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              <span>Project Site Login</span>
-            </button>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                System Access
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Enter your access key to unlock your workspace.
+              </p>
+            </div>
 
             <button
               type="button"
-              onClick={() => {
-                setActiveTab('ADMIN');
-                setError(null);
-              }}
-              className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-2 ${
-                activeTab === 'ADMIN'
-                  ? 'bg-white text-purple-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              onClick={() => setIsChangeKeyOpen(true)}
+              className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition flex items-center gap-1.5 text-xs font-semibold"
+              title="Change Master Admin Key"
             >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Super Admin Login</span>
+              <Settings2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Change Keys</span>
             </button>
           </div>
 
-          {/* Error Message */}
+          {/* Error / Success Messages */}
           {error && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Mode 1: Project Site Supervisor Login */}
-          {activeTab === 'PROJECT' && (
-            <form onSubmit={handleProjectLogin} className="space-y-4">
-              {projects.length === 0 ? (
-                <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-2.5">
-                  <Building2 className="w-8 h-8 text-amber-600 mx-auto" />
-                  <p className="text-xs font-bold text-amber-900">
-                    No Construction Projects Created Yet
-                  </p>
-                  <p className="text-[11px] text-amber-700 leading-relaxed">
-                    Please log in using the Super Administrator account first to create your initial project and supervisor credentials.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('ADMIN');
-                      setError(null);
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white transition inline-flex items-center gap-1.5 shadow-xs"
-                  >
-                    <span>Switch to Super Admin Login</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Select Construction Site *
-                    </label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                      <select
-                        value={selectedProjectId}
-                        onChange={(e) => setSelectedProjectId(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition appearance-none"
-                      >
-                        {projects.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({p.code})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Site Supervisor Password *
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        placeholder="Enter supervisor password"
-                        value={projectPassword}
-                        onChange={(e) => setProjectPassword(e.target.value)}
-                        className="w-full pl-9 pr-10 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-                        title={showPassword ? 'Hide password' : 'Show password'}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/25 transition flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <span>{loading ? 'Authenticating...' : 'Enter Site Kiosk & Dashboard'}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-            </form>
+          {successMessage && (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
           )}
 
-          {/* Mode 2: Super Admin / Email Login */}
-          {activeTab === 'ADMIN' && (
-            <form onSubmit={handleEmailLogin} className="space-y-4">
+          {/* Smart Passcode Form */}
+          {!showEmailLogin ? (
+            <form onSubmit={handlePasscodeLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Administrator Email Address *
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Access Passcode or Site Key
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="admin@buildcorp.global"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-purple-600 focus:bg-white transition"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Administrator Password *
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                  <div className="absolute left-3.5 top-3 text-slate-400">
+                    <KeyRound className="w-4 h-4" />
+                  </div>
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter Admin Key (e.g. admin123) or Site Key..."
+                    value={passcode}
+                    onChange={(e) => setPasscode(e.target.value)}
+                    className="w-full pl-10 pr-11 py-3 text-xs sm:text-sm font-mono rounded-2xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition"
+                    autoFocus
                     required
-                    placeholder="••••••••"
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    className="w-full pl-9 pr-10 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-purple-600 focus:bg-white transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-                    title={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-700 transition"
+                    title={showPassword ? 'Hide Key' : 'Show Key'}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
+              {/* Submit CTA */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md shadow-purple-500/25 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25 disabled:opacity-50 transition flex items-center justify-center gap-2 active:scale-98"
               >
-                <span>{loading ? 'Authenticating...' : 'Sign In as Super Administrator'}</span>
+                <span>{loading ? 'Authenticating...' : 'Unlock & Enter Dashboard'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+
+              {/* Helpful Hint */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                  <HelpCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span>How does Single-Key login work?</span>
+                </div>
+                <p className="leading-relaxed text-slate-500">
+                  • <strong>Admin Master Key</strong> (default: <code className="font-mono text-blue-700 bg-blue-50 px-1 py-0.5 rounded">admin123</code>): Logs into Headquarters with full management across all sites.
+                </p>
+                <p className="leading-relaxed text-slate-500">
+                  • <strong>Site Key or Project Code</strong>: Logs a foreman directly into their site kiosk.
+                </p>
+              </div>
+
+              {/* Toggle to Classic Email Login */}
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEmailLogin(true);
+                    setError(null);
+                  }}
+                  className="text-xs text-slate-500 hover:text-blue-600 font-semibold transition"
+                >
+                  Or sign in with email and password →
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* Classic Email Login Form */
+            <form onSubmit={handleEmailLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  placeholder="admin@buildcorp.global"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={emailPassword}
+                  onChange={(e) => setEmailPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20 disabled:opacity-50 transition flex items-center justify-center gap-2"
+              >
+                <span>{loading ? 'Verifying...' : 'Sign In with Email'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEmailLogin(false);
+                    setError(null);
+                  }}
+                  className="text-xs text-blue-600 hover:underline font-semibold"
+                >
+                  ← Back to Smart Single-Key Login
+                </button>
+              </div>
             </form>
           )}
         </div>
       </div>
+
+      {/* Change Admin Master Key Modal */}
+      {isChangeKeyOpen && (
+        <Modal
+          isOpen={isChangeKeyOpen}
+          onClose={() => setIsChangeKeyOpen(false)}
+          title={
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-blue-600" />
+              <span>Change Super Admin Master Key</span>
+            </div>
+          }
+          description="Update your central administrator password anytime."
+          maxWidth="md"
+        >
+          <form onSubmit={handleChangeAdminKey} className="space-y-4">
+            {changeKeyError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{changeKeyError}</span>
+              </div>
+            )}
+
+            {changeKeySuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{changeKeySuccess}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Current Admin Key *
+              </label>
+              <input
+                type="password"
+                placeholder="Current key (default: admin123)"
+                value={currentKeyInput}
+                onChange={(e) => setCurrentKeyInput(e.target.value)}
+                className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                New Admin Key *
+              </label>
+              <input
+                type="text"
+                placeholder="Enter new secret key (min 4 characters)"
+                value={newKeyInput}
+                onChange={(e) => setNewKeyInput(e.target.value)}
+                className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsChangeKeyOpen(false)}
+                className="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20 transition"
+              >
+                Save New Key
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

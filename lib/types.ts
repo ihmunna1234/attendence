@@ -10,6 +10,7 @@ export interface Project {
   id: string;
   name: string;
   code: string;
+  passcode?: string; // Quick site login passcode
   target_latitude: number | null;
   target_longitude: number | null;
   geofence_radius_meters: number;

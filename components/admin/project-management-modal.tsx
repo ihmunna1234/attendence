@@ -66,7 +66,7 @@ export function ProjectManagementModal({
       setGeofenceRadius(projectToEdit.geofence_radius_meters.toString());
       setDescription(projectToEdit.description || '');
       setSupervisorEmail('');
-      setSupervisorPassword('supervisor123');
+      setSupervisorPassword(projectToEdit.passcode || 'supervisor123');
     } else {
       setName('');
       setCode(`PRJ-${Math.floor(100 + Math.random() * 900)}`);
@@ -126,6 +126,7 @@ export function ProjectManagementModal({
         updateProject(projectToEdit.id, {
           name: name.trim(),
           code: code.toUpperCase().trim(),
+          passcode: supervisorPassword.trim() || projectToEdit.passcode || code.toLowerCase(),
           target_latitude: latNum,
           target_longitude: lngNum,
           geofence_radius_meters: radiusNum,
@@ -161,6 +162,7 @@ export function ProjectManagementModal({
         const created = createProject({
           name: name.trim(),
           code: code.toUpperCase().trim(),
+          passcode: supervisorPassword.trim() || 'supervisor123',
           target_latitude: latNum,
           target_longitude: lngNum,
           geofence_radius_meters: radiusNum,
@@ -269,46 +271,45 @@ export function ProjectManagementModal({
           </div>
         </div>
 
-        {/* Project Supervisor Credentials (For project-wise login) */}
-        {!projectToEdit && (
-          <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
-              <Mail className="w-4 h-4 text-blue-600" />
-              <span>Project Account (Site Supervisor Login Credentials)</span>
+        {/* Project Site Access Key & Supervisor Credentials */}
+        <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-3">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
+            <KeyRound className="w-4 h-4 text-blue-600" />
+            <span>Site Access Key & Passcode (Instant Foreman Login)</span>
+          </div>
+          <p className="text-[11px] text-slate-600">
+            Site foremen & supervisors can log into this project site using either this Passcode or the Project Code.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                Site Access Passcode / Password *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. site123 or bayan2026"
+                value={supervisorPassword}
+                onChange={(e) => setSupervisorPassword(e.target.value)}
+                className="w-full px-3 py-1.5 text-xs font-mono font-bold rounded-xl bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600"
+                required
+              />
             </div>
-            <p className="text-[11px] text-slate-600">
-              Generate credentials for the site supervisor. This account will be strictly restricted to this project.
-            </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                  Supervisor Login Email
-                </label>
-                <input
-                  type="email"
-                  placeholder="supervisor.newsite@buildcorp.global"
-                  value={supervisorEmail}
-                  onChange={(e) => setSupervisorEmail(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs rounded-xl bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                  Initial Password
-                </label>
-                <input
-                  type="text"
-                  placeholder="supervisor123"
-                  value={supervisorPassword}
-                  onChange={(e) => setSupervisorPassword(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs font-mono rounded-xl bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600"
-                />
-              </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                Supervisor Email (Optional)
+              </label>
+              <input
+                type="email"
+                placeholder="supervisor.site@buildcorp.global"
+                value={supervisorEmail}
+                onChange={(e) => setSupervisorEmail(e.target.value)}
+                className="w-full px-3 py-1.5 text-xs rounded-xl bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600"
+              />
             </div>
           </div>
-        )}
+        </div>
 
         {/* Geofence Configuration with Interactive Map */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">

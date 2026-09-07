@@ -137,6 +137,12 @@ export default function ProjectsPage() {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Site Access Key:</span>
+                      <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+                        {proj.passcode || proj.code}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
                       <span className="text-slate-500">Geofence Radius:</span>
                       <span className="font-bold text-emerald-700">
                         {proj.geofence_radius_meters} meters

@@ -2,7 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, Project, UserRole } from './types';
-import { getProjects, getUsers, authenticateUser, authenticateProjectSupervisor, resetToDemoData } from './db';
+import {
+  getProjects,
+  getUsers,
+  authenticateUser,
+  authenticateProjectSupervisor,
+  authenticateByPasscode,
+  resetToDemoData,
+} from './db';
 
 interface AuthContextType {
   user: User | null;
@@ -13,6 +20,7 @@ interface AuthContextType {
   allUsers: User[];
   login: (emailOrCode: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   loginWithProject: (projectId: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithPasscode: (passcode: string) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
   loginAsPreset: (userId: string) => void;
   logout: () => void;
   setActiveProject: (project: Project | null) => void;
@@ -106,6 +114,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: true };
   };
 
+  const loginWithPasscode = async (passcode: string): Promise<{ success: boolean; error?: string; role?: UserRole }> => {
+    const res = authenticateByPasscode(passcode);
+    if (!res) {
+      return { success: false, error: 'Invalid access passcode. Please verify your site key or admin key.' };
+    }
+
+    setUser(res.user);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(AUTH_STORAGE_KEY, res.user.id);
+    }
+
+    const prjs = getProjects();
+    if (res.project) {
+      setActiveProject(res.project);
+    } else if (res.user.role === 'PROJECT_MANAGER' && res.user.project_id) {
+      const p = prjs.find((x) => x.id === res.user.project_id);
+      setActiveProject(p || prjs[0] || null);
+    } else {
+      setActiveProject(prjs[0] || null);
+    }
+
+    return { success: true, role: res.user.role };
+  };
+
   const loginAsPreset = (userId: string) => {
     const usrs = getUsers();
     const target = usrs.find((u) => u.id === userId);
@@ -166,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         allUsers,
         login,
         loginWithProject,
+        loginWithPasscode,
         loginAsPreset,
         logout,
         setActiveProject: handleSetActiveProject,

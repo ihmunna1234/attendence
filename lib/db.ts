@@ -13,6 +13,7 @@ import {
   INITIAL_EMPLOYEES,
   INITIAL_ATTENDANCE_LOGS,
 } from './seed-data';
+import { getAdminMasterKey } from './auth-config';
 
 const STORAGE_KEYS = {
   PROJECTS: 'geoattend_prod_projects_v1',
@@ -140,6 +141,61 @@ export function authenticateProjectSupervisor(projectId: string, password?: stri
   }
 
   return supervisor;
+}
+
+export function authenticateByPasscode(passcode: string): { user: User; project?: Project } | null {
+  const clean = passcode.trim();
+  if (!clean) return null;
+
+  // 1. Check Admin Master Key (configurable)
+  const adminKey = getAdminMasterKey();
+  if (clean === adminKey) {
+    const users = getUsers();
+    let admin = users.find((u) => u.role === 'SUPER_ADMIN');
+    if (!admin) {
+      admin = createUser({
+        email: 'admin@buildcorp.global',
+        password: adminKey,
+        role: 'SUPER_ADMIN',
+        project_id: null,
+        full_name: 'System Administrator',
+      });
+    }
+    return { user: admin };
+  }
+
+  // 2. Check Project Sites: matches project.passcode, project.code, or supervisor.password
+  const projects = getProjects();
+  const users = getUsers();
+
+  const matchedProject = projects.find((p) => {
+    const codeMatch = p.code.toLowerCase() === clean.toLowerCase();
+    const passMatch = p.passcode && p.passcode.trim().toLowerCase() === clean.toLowerCase();
+    return codeMatch || passMatch;
+  });
+
+  if (matchedProject) {
+    let supervisor = users.find((u) => u.project_id === matchedProject.id && u.role === 'PROJECT_MANAGER');
+    if (!supervisor) {
+      supervisor = createUser({
+        email: `supervisor@${matchedProject.code.toLowerCase().replace(/[^a-z0-9]/g, '')}.site`,
+        password: matchedProject.passcode || clean,
+        role: 'PROJECT_MANAGER',
+        project_id: matchedProject.id,
+        full_name: `${matchedProject.name} Supervisor`,
+      });
+    }
+    return { user: supervisor, project: matchedProject };
+  }
+
+  // 3. Also check if clean matches any direct user password
+  const directUser = users.find((u) => u.password && u.password.trim() === clean);
+  if (directUser) {
+    const prj = directUser.project_id ? projects.find((p) => p.id === directUser.project_id) : undefined;
+    return { user: directUser, project: prj };
+  }
+
+  return null;
 }
 
 /* ==================== EMPLOYEES ==================== */
