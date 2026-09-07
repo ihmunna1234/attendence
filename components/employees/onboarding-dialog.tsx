@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useAuth } from '@/lib/auth-context';
 import { createEmployee, isIqamaDuplicate } from '@/lib/db';
@@ -33,10 +33,27 @@ interface OnboardingDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialProjectId?: string;
 }
 
-export function OnboardingDialog({ isOpen, onClose, onSuccess }: OnboardingDialogProps) {
-  const { activeProject } = useAuth();
+export function OnboardingDialog({ isOpen, onClose, onSuccess, initialProjectId }: OnboardingDialogProps) {
+  const { activeProject, projects, role } = useAuth();
+
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(
+    initialProjectId && initialProjectId !== 'ALL'
+      ? initialProjectId
+      : (activeProject?.id || projects[0]?.id || '')
+  );
+
+  useEffect(() => {
+    if (initialProjectId && initialProjectId !== 'ALL') {
+      setSelectedProjectId(initialProjectId);
+    } else if (activeProject?.id) {
+      setSelectedProjectId(activeProject.id);
+    } else if (projects[0]?.id) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [initialProjectId, activeProject, projects]);
 
   const [fullName, setFullName] = useState('');
   const [iqamaNumber, setIqamaNumber] = useState('');
@@ -98,8 +115,9 @@ export function OnboardingDialog({ isOpen, onClose, onSuccess }: OnboardingDialo
     e.preventDefault();
     setSubmitError(null);
 
-    if (!activeProject) {
-      setSubmitError('No active project selected.');
+    const targetProject = projects.find((p) => p.id === selectedProjectId) || activeProject;
+    if (!targetProject) {
+      setSubmitError('Please create a project site in Projects first before registering employees.');
       return;
     }
 
@@ -122,9 +140,9 @@ export function OnboardingDialog({ isOpen, onClose, onSuccess }: OnboardingDialo
     }
     setFormErrors({});
 
-    if (isIqamaDuplicate(activeProject.id, iqamaNumber)) {
+    if (isIqamaDuplicate(targetProject.id, iqamaNumber)) {
       setSubmitError(
-        `Iqama number "${iqamaNumber}" is already registered in ${activeProject.name}. Duplicate entries are prohibited.`
+        `Iqama number "${iqamaNumber}" is already registered in ${targetProject.name}. Duplicate entries are prohibited.`
       );
       return;
     }
@@ -138,7 +156,7 @@ export function OnboardingDialog({ isOpen, onClose, onSuccess }: OnboardingDialo
 
     try {
       createEmployee({
-        project_id: activeProject.id,
+        project_id: targetProject.id,
         full_name: fullName.trim(),
         iqama_number: iqamaNumber.trim(),
         designation: designation.trim(),
@@ -159,6 +177,8 @@ export function OnboardingDialog({ isOpen, onClose, onSuccess }: OnboardingDialo
     }
   };
 
+  const targetProject = projects.find((p) => p.id === selectedProjectId) || activeProject;
+
   return (
     <Modal
       isOpen={isOpen}
@@ -169,7 +189,7 @@ export function OnboardingDialog({ isOpen, onClose, onSuccess }: OnboardingDialo
           <span>Onboard New Site Employee</span>
         </div>
       }
-      description={`Register worker into ${activeProject?.name || 'Project'} with Iqama ID & Biometric Headshot.`}
+      description={`Register worker into ${targetProject?.name || 'Project Site'} with Iqama ID & Biometric Headshot.`}
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -177,6 +197,30 @@ export function OnboardingDialog({ isOpen, onClose, onSuccess }: OnboardingDialo
           <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{submitError}</span>
+          </div>
+        )}
+
+        {/* Super Admin Project Site Selector */}
+        {role === 'SUPER_ADMIN' && (
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              Assign to Project Site *
+            </label>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition font-medium"
+              required
+            >
+              {projects.length === 0 && (
+                <option value="">No projects available (Create one first)</option>
+              )}
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.code})
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
