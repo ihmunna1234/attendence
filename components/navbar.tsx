@@ -40,8 +40,8 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Project Scope Indicator / Switcher (Icon-Based on Mobile) */}
-        <div className="flex items-center gap-1 sm:gap-2">
+        {/* Project Scope Indicator / Switcher (Hidden on Mobile view) */}
+        <div className="hidden sm:flex items-center gap-2">
           {role === 'SUPER_ADMIN' ? (
             <div className="relative">
               <button

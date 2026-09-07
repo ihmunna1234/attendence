@@ -51,6 +51,9 @@ export interface AttendanceLog {
   latitude: number | null;
   longitude: number | null;
   location_status: LocationStatus;
+  regular_hours?: number; // Standard 10 hours per day
+  overtime_hours?: number; // Additional overtime hours
+  notes?: string;
   created_at: string;
   // joined fields for easy rendering
   employee?: Employee;
@@ -70,6 +73,9 @@ export interface TimesheetDayRecord {
   status: 'PRESENT' | 'ABSENT' | 'OUT_OF_RANGE' | 'WEEKEND';
   checkIn?: AttendanceLog;
   checkOut?: AttendanceLog;
+  regularHours?: number;
+  overtimeHours?: number;
+  totalHours?: number;
 }
 
 export interface EmployeeTimesheetRow {
@@ -78,6 +84,9 @@ export interface EmployeeTimesheetRow {
   totalPresent: number;
   totalViolations: number;
   totalAbsent: number;
+  totalRegularHours?: number;
+  totalOvertimeHours?: number;
+  totalHours?: number;
 }
 
 export interface KPIMetrics {

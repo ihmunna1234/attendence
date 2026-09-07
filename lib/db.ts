@@ -256,6 +256,8 @@ export function createAttendanceLog(
 ): AttendanceLog {
   const newLog: AttendanceLog = {
     ...data,
+    regular_hours: data.regular_hours ?? 10,
+    overtime_hours: data.overtime_hours ?? 0,
     id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `att-${Date.now()}`,
     created_at: new Date().toISOString(),
   };
@@ -264,6 +266,25 @@ export function createAttendanceLog(
   setItem(STORAGE_KEYS.LOGS, list);
   memLogs = list;
   return newLog;
+}
+
+export function updateAttendanceOvertime(
+  logId: string,
+  overtimeHours: number,
+  notes?: string
+): AttendanceLog | null {
+  const allLogs = getAttendanceLogs();
+  const log = allLogs.find((l) => l.id === logId);
+  if (!log) return null;
+
+  log.overtime_hours = Math.max(0, overtimeHours);
+  if (notes !== undefined) {
+    log.notes = notes;
+  }
+
+  setItem(STORAGE_KEYS.LOGS, allLogs);
+  memLogs = allLogs;
+  return log;
 }
 
 /* ==================== KPI METRICS ==================== */
@@ -328,11 +349,13 @@ export function getMonthlyTimesheetMatrix(
     let totalPresent = 0;
     let totalViolations = 0;
     let totalAbsent = 0;
+    let totalRegularHours = 0;
+    let totalOvertimeHours = 0;
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayDate = new Date(year, month - 1, day);
-      const isWeekend = dayDate.getDay() === 5; // Friday weekend in Saudi Arabia or adjust
+      const isWeekend = dayDate.getDay() === 5; // Friday weekend
 
       // Find logs for this employee on this day
       const dayLogs = logs.filter((log) => {
@@ -349,16 +372,25 @@ export function getMonthlyTimesheetMatrix(
       const checkOut = dayLogs.find((l) => l.type === 'CHECK_OUT');
 
       let status: 'PRESENT' | 'ABSENT' | 'OUT_OF_RANGE' | 'WEEKEND' = 'ABSENT';
+      let regularHours = 0;
+      let overtimeHours = 0;
+      let totalDayHours = 0;
 
       if (checkIn) {
         if (checkIn.location_status === 'OUT_OF_RANGE' || checkOut?.location_status === 'OUT_OF_RANGE') {
           status = 'OUT_OF_RANGE';
           totalViolations += 1;
-          totalPresent += 1; // Still present, but flagged
+          totalPresent += 1;
         } else {
           status = 'PRESENT';
           totalPresent += 1;
         }
+
+        regularHours = checkIn.regular_hours ?? 10;
+        overtimeHours = checkIn.overtime_hours ?? 0;
+        totalDayHours = regularHours + overtimeHours;
+        totalRegularHours += regularHours;
+        totalOvertimeHours += overtimeHours;
       } else if (isWeekend) {
         status = 'WEEKEND';
       } else {
@@ -371,6 +403,9 @@ export function getMonthlyTimesheetMatrix(
         status,
         checkIn,
         checkOut,
+        regularHours,
+        overtimeHours,
+        totalHours: totalDayHours,
       };
     }
 
@@ -380,6 +415,9 @@ export function getMonthlyTimesheetMatrix(
       totalPresent,
       totalViolations,
       totalAbsent,
+      totalRegularHours,
+      totalOvertimeHours,
+      totalHours: totalRegularHours + totalOvertimeHours,
     };
   });
 }
