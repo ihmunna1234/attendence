@@ -328,18 +328,19 @@ export function getKPIMetrics(projectId?: string): KPIMetrics {
 
 /* ==================== MONTHLY TIMESHEET MATRIX ==================== */
 export function getMonthlyTimesheetMatrix(
-  projectId: string,
-  year: number,
-  month: number // 1-12
+  projectId?: string,
+  year: number = new Date().getFullYear(),
+  month: number = new Date().getMonth() + 1 // 1-12
 ): EmployeeTimesheetRow[] {
-  const employees = getEmployees(projectId).filter((e) => e.status === 'ACTIVE');
+  const isAll = !projectId || projectId === 'ALL';
+  const employees = (isAll ? getEmployees() : getEmployees(projectId)).filter((e) => e.status === 'ACTIVE');
   const daysInMonth = new Date(year, month, 0).getDate();
 
   const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
   const endDate = new Date(Date.UTC(year, month - 1, daysInMonth, 23, 59, 59)).toISOString();
 
   const logs = getAttendanceLogs({
-    projectId,
+    projectId: isAll ? undefined : projectId,
     startDate,
     endDate,
   });

@@ -57,6 +57,9 @@ export function exportTimesheetMatrixToExcel(
       'Iqama Number': row.employee.iqama_number,
       'Designation': row.employee.designation,
       'Total Days Present': row.totalPresent,
+      'Regular Hours (10h)': row.totalRegularHours ?? (row.totalPresent * 10),
+      'Overtime Hours': row.totalOvertimeHours ?? 0,
+      'Total Hours': row.totalHours ?? ((row.totalRegularHours ?? (row.totalPresent * 10)) + (row.totalOvertimeHours ?? 0)),
       'Geofence Violations': row.totalViolations,
       'Absent Days': row.totalAbsent,
     };
