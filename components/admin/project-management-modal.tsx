@@ -49,7 +49,7 @@ export function ProjectManagementModal({
   const [targetLng, setTargetLng] = useState('46.675296');
   const [geofenceRadius, setGeofenceRadius] = useState('200');
   const [supervisorEmail, setSupervisorEmail] = useState('');
-  const [supervisorPassword, setSupervisorPassword] = useState('supervisor123');
+  const [supervisorPassword, setSupervisorPassword] = useState('');
   const [description, setDescription] = useState('');
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -66,7 +66,7 @@ export function ProjectManagementModal({
       setGeofenceRadius(projectToEdit.geofence_radius_meters.toString());
       setDescription(projectToEdit.description || '');
       setSupervisorEmail('');
-      setSupervisorPassword(projectToEdit.passcode || 'supervisor123');
+      setSupervisorPassword(projectToEdit.passcode || '');
     } else {
       setName('');
       setCode(`PRJ-${Math.floor(100 + Math.random() * 900)}`);
@@ -76,7 +76,7 @@ export function ProjectManagementModal({
       setGeofenceRadius('200');
       setDescription('');
       setSupervisorEmail('');
-      setSupervisorPassword('supervisor123');
+      setSupervisorPassword('');
     }
     setFormErrors({});
     setSubmitError(null);
@@ -162,7 +162,7 @@ export function ProjectManagementModal({
         const created = createProject({
           name: name.trim(),
           code: code.toUpperCase().trim(),
-          passcode: supervisorPassword.trim() || 'supervisor123',
+          passcode: supervisorPassword.trim() || undefined,
           target_latitude: latNum,
           target_longitude: lngNum,
           geofence_radius_meters: radiusNum,
@@ -177,7 +177,7 @@ export function ProjectManagementModal({
 
         createUser({
           email: effectiveEmail,
-          password: supervisorPassword.trim() || 'supervisor123',
+          password: supervisorPassword.trim() || undefined,
           role: 'PROJECT_MANAGER',
           project_id: created.id,
           full_name: `Eng. Supervisor (${name})`,
@@ -287,12 +287,11 @@ export function ProjectManagementModal({
                 Site Access Passcode / Password *
               </label>
               <input
-                type="text"
-                placeholder="e.g. site123 or bayan2026"
+                type="password"
+                placeholder="Enter secure passcode"
                 value={supervisorPassword}
                 onChange={(e) => setSupervisorPassword(e.target.value)}
                 className="w-full px-3 py-1.5 text-xs font-mono font-bold rounded-xl bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600"
-                required
               />
             </div>
 

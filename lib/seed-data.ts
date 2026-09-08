@@ -8,7 +8,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'usr-admin-01',
     email: 'admin@buildcorp.global',
-    password: 'admin123',
+    password: process.env.NEXT_PUBLIC_ADMIN_KEY?.trim() || undefined,
     role: 'SUPER_ADMIN',
     project_id: null,
     full_name: 'Administrator',

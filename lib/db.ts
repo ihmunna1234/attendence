@@ -147,9 +147,9 @@ export function authenticateByPasscode(passcode: string): { user: User; project?
   const clean = passcode.trim();
   if (!clean) return null;
 
-  // 1. Check Admin Master Key (configurable)
+  // 1. Check Admin Master Key (environment variable configured)
   const adminKey = getAdminMasterKey();
-  if (clean === adminKey) {
+  if (adminKey && clean === adminKey) {
     const users = getUsers();
     let admin = users.find((u) => u.role === 'SUPER_ADMIN');
     if (!admin) {
@@ -164,13 +164,13 @@ export function authenticateByPasscode(passcode: string): { user: User; project?
     return { user: admin };
   }
 
-  // 2. Check Project Sites: matches project.passcode, project.code, or supervisor.password
+  // 2. Check Project Sites: match project.passcode or project.code
   const projects = getProjects();
   const users = getUsers();
 
   const matchedProject = projects.find((p) => {
     const codeMatch = p.code.toLowerCase() === clean.toLowerCase();
-    const passMatch = p.passcode && p.passcode.trim().toLowerCase() === clean.toLowerCase();
+    const passMatch = p.passcode && p.passcode.trim() === clean;
     return codeMatch || passMatch;
   });
 
@@ -188,7 +188,7 @@ export function authenticateByPasscode(passcode: string): { user: User; project?
     return { user: supervisor, project: matchedProject };
   }
 
-  // 3. Also check if clean matches any direct user password
+  // 3. Check direct user match against password securely
   const directUser = users.find((u) => u.password && u.password.trim() === clean);
   if (directUser) {
     const prj = directUser.project_id ? projects.find((p) => p.id === directUser.project_id) : undefined;

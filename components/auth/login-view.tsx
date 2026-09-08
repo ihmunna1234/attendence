@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { getAdminMasterKey, setAdminMasterKey } from '@/lib/auth-config';
+import { getAdminMasterKey } from '@/lib/auth-config';
 import { Modal } from '@/components/ui/modal';
 import {
   ShieldCheck,
@@ -88,28 +88,7 @@ export function LoginView() {
   // Handle Changing Master Admin Key
   const handleChangeAdminKey = (e: React.FormEvent) => {
     e.preventDefault();
-    setChangeKeyError(null);
-    setChangeKeySuccess(null);
-
-    const activeMasterKey = getAdminMasterKey();
-    if (currentKeyInput.trim() !== activeMasterKey) {
-      setChangeKeyError('Current Admin Master Key is incorrect.');
-      return;
-    }
-
-    if (!newKeyInput.trim() || newKeyInput.trim().length < 4) {
-      setChangeKeyError('New key must be at least 4 characters long.');
-      return;
-    }
-
-    setAdminMasterKey(newKeyInput.trim());
-    setChangeKeySuccess('Master key updated successfully! You can now use your new key.');
-    setTimeout(() => {
-      setIsChangeKeyOpen(false);
-      setCurrentKeyInput('');
-      setNewKeyInput('');
-      setChangeKeySuccess(null);
-    }, 1500);
+    setChangeKeyError('Admin Master Key configuration is managed through environment settings.');
   };
 
   return (
@@ -193,7 +172,7 @@ export function LoginView() {
                   </div>
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter Admin Key (e.g. admin123) or Site Key..."
+                    placeholder="Enter Access Key or Site Passcode..."
                     value={passcode}
                     onChange={(e) => setPasscode(e.target.value)}
                     className="w-full pl-10 pr-11 py-3 text-xs sm:text-sm font-mono rounded-2xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition"
@@ -228,10 +207,10 @@ export function LoginView() {
                   <span>How does Single-Key login work?</span>
                 </div>
                 <p className="leading-relaxed text-slate-500">
-                  • <strong>Admin Master Key</strong> (default: <code className="font-mono text-blue-700 bg-blue-50 px-1 py-0.5 rounded">admin123</code>): Logs into Headquarters with full management across all sites.
+                  • <strong>Admin Master Key</strong>: Logs into Headquarters with full management across all sites.
                 </p>
                 <p className="leading-relaxed text-slate-500">
-                  • <strong>Site Key or Project Code</strong>: Logs a foreman directly into their site kiosk.
+                  • <strong>Site Passcode</strong>: Logs a foreman directly into their assigned site.
                 </p>
               </div>
 
@@ -341,7 +320,7 @@ export function LoginView() {
               </label>
               <input
                 type="password"
-                placeholder="Current key (default: admin123)"
+                placeholder="Current Admin Key"
                 value={currentKeyInput}
                 onChange={(e) => setCurrentKeyInput(e.target.value)}
                 className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
