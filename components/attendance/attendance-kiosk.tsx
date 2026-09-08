@@ -518,7 +518,7 @@ export function AttendanceKiosk() {
                     <button
                       type="button"
                       onClick={() => handleOpenAttendanceCamera(emp)}
-                      className="w-full py-2 px-3 rounded-2xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2"
+                      className="w-full py-3 px-4 rounded-2xl text-xs sm:text-sm font-extrabold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/25 transition flex items-center justify-center gap-2 active:scale-98"
                     >
                       <Camera className="w-4 h-4" />
                       <span>Take Photo & Punch (10h)</span>
@@ -583,8 +583,8 @@ export function AttendanceKiosk() {
             </div>
           )}
 
-          {/* Live Camera Viewfinder */}
-          <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 shadow-inner">
+          {/* Live Camera Viewfinder (Aspect 4:3 Container for Mobile) */}
+          <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 shadow-inner aspect-4/3 flex items-center justify-center">
             <CameraViewfinder
               onCapture={(dataUrl) => setCapturedPhoto(dataUrl)}
               capturedImage={capturedPhoto}

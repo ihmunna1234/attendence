@@ -172,6 +172,9 @@ export function LoginView() {
                   </div>
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    inputMode="text"
+                    autoCapitalize="off"
+                    autoCorrect="off"
                     placeholder="Enter Access Key or Site Passcode..."
                     value={passcode}
                     onChange={(e) => setPasscode(e.target.value)}

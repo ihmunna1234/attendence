@@ -465,7 +465,7 @@ export function TimesheetMatrix() {
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="py-3 px-4 sticky left-0 z-20 bg-slate-50 border-r border-slate-200 min-w-[200px]">
+                  <th className="py-3 px-4 sticky left-0 z-20 bg-slate-50 border-r border-slate-200 min-w-[200px] shadow-xs">
                     Worker Profile
                   </th>
                   {role === 'SUPER_ADMIN' && (
@@ -523,7 +523,7 @@ export function TimesheetMatrix() {
                         className="hover:bg-slate-50/70 transition-colors"
                       >
                         {/* Fixed Worker Info Cell */}
-                        <td className="py-2.5 px-4 sticky left-0 z-10 bg-white border-r border-slate-200 min-w-[200px]">
+                        <td className="py-2.5 px-4 sticky left-0 z-10 bg-white border-r border-slate-200 min-w-[200px] shadow-xs">
                           <div className="flex items-center gap-2.5">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img

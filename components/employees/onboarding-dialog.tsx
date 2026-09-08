@@ -312,6 +312,7 @@ export function OnboardingDialog({ isOpen, onClose, onSuccess, initialProjectId 
               <input
                 type="file"
                 accept="application/pdf,image/png,image/jpeg"
+                capture="environment"
                 className="hidden"
                 onChange={handleIqamaDocUpload}
               />
@@ -396,6 +397,7 @@ export function OnboardingDialog({ isOpen, onClose, onSuccess, initialProjectId 
                       <input
                         type="file"
                         accept="image/*"
+                        capture="environment"
                         className="hidden"
                         onChange={handlePhotoUpload}
                       />

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Modal } from '@/components/ui/modal';
 import { Project } from '@/lib/types';
 import { createProject, updateProject, createUser, getUsers } from '@/lib/db';
-import { Building2, MapPin, AlertCircle, KeyRound, Mail } from 'lucide-react';
+import { Building2, MapPin, AlertCircle, KeyRound, Mail, Eye, EyeOff } from 'lucide-react';
 
 const GeofenceMapPicker = dynamic(
   () => import('./geofence-map-picker').then((mod) => mod.GeofenceMapPicker),
@@ -50,6 +50,7 @@ export function ProjectManagementModal({
   const [geofenceRadius, setGeofenceRadius] = useState('200');
   const [supervisorEmail, setSupervisorEmail] = useState('');
   const [supervisorPassword, setSupervisorPassword] = useState('');
+  const [showSupervisorPassword, setShowSupervisorPassword] = useState(false);
   const [description, setDescription] = useState('');
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -286,13 +287,23 @@ export function ProjectManagementModal({
               <label className="block text-[11px] font-bold text-slate-700 mb-1">
                 Site Access Passcode / Password *
               </label>
-              <input
-                type="password"
-                placeholder="Enter secure passcode"
-                value={supervisorPassword}
-                onChange={(e) => setSupervisorPassword(e.target.value)}
-                className="w-full px-3 py-1.5 text-xs font-mono font-bold rounded-xl bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600"
-              />
+              <div className="relative">
+                <input
+                  type={showSupervisorPassword ? 'text' : 'password'}
+                  placeholder="Enter secure passcode"
+                  value={supervisorPassword}
+                  onChange={(e) => setSupervisorPassword(e.target.value)}
+                  className="w-full pl-3 pr-9 py-1.5 text-xs font-mono font-bold rounded-xl bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSupervisorPassword(!showSupervisorPassword)}
+                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 transition"
+                  title={showSupervisorPassword ? 'Hide Passcode' : 'Show Passcode'}
+                >
+                  {showSupervisorPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
             <div>
