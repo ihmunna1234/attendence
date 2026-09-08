@@ -115,27 +115,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginWithPasscode = async (passcode: string): Promise<{ success: boolean; error?: string; role?: UserRole }> => {
-    const res = authenticateByPasscode(passcode);
-    if (!res) {
-      return { success: false, error: 'Invalid access passcode. Please verify your site key or admin key.' };
-    }
+    try {
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, action: 'passcode' }),
+      });
 
-    setUser(res.user);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(AUTH_STORAGE_KEY, res.user.id);
-    }
+      const data = await response.json();
+      if (!data.success || !data.user) {
+        return { success: false, error: data.error || 'Invalid access passcode.' };
+      }
 
-    const prjs = getProjects();
-    if (res.project) {
-      setActiveProject(res.project);
-    } else if (res.user.role === 'PROJECT_MANAGER' && res.user.project_id) {
-      const p = prjs.find((x) => x.id === res.user.project_id);
-      setActiveProject(p || prjs[0] || null);
-    } else {
-      setActiveProject(prjs[0] || null);
-    }
+      setUser(data.user);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(AUTH_STORAGE_KEY, data.user.id);
+      }
 
-    return { success: true, role: res.user.role };
+      const prjs = getProjects();
+      if (data.project) {
+        setActiveProject(data.project);
+      } else if (data.user.role === 'PROJECT_MANAGER' && data.user.project_id) {
+        const p = prjs.find((x) => x.id === data.user.project_id);
+        setActiveProject(p || prjs[0] || null);
+      } else {
+        setActiveProject(prjs[0] || null);
+      }
+
+      return { success: true, role: data.user.role };
+    } catch {
+      return { success: false, error: 'Server authentication failed. Please try again.' };
+    }
   };
 
   const loginAsPreset = (userId: string) => {
