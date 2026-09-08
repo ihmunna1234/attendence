@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL DEFAULT 'admin123',
+    password TEXT,
     role user_role NOT NULL DEFAULT 'PROJECT_MANAGER',
     project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
     full_name TEXT,
@@ -103,26 +103,33 @@ CREATE INDEX IF NOT EXISTS idx_attendance_project_date ON attendance_logs(projec
 CREATE INDEX IF NOT EXISTS idx_attendance_employee ON attendance_logs(employee_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_timestamp ON attendance_logs(timestamp DESC);
 
--- 8. Row Level Security (RLS) - Permissive for Web Application Client
+-- 8. Row Level Security (RLS) - Restricted Access Policies
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendance_logs ENABLE ROW LEVEL SECURITY;
 
+-- Remove legacy public policies if present
+DROP POLICY IF EXISTS "Allow public read-write on projects" ON projects;
+DROP POLICY IF EXISTS "Allow public read-write on users" ON users;
+DROP POLICY IF EXISTS "Allow public read-write on employees" ON employees;
+DROP POLICY IF EXISTS "Allow public read-write on attendance_logs" ON attendance_logs;
+
+-- Secure RLS Policies: Authenticated Users Only
 DO $$ BEGIN
-    CREATE POLICY "Allow public read-write on projects" ON projects FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "Authenticated read-write projects" ON projects FOR ALL TO authenticated USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 DO $$ BEGIN
-    CREATE POLICY "Allow public read-write on users" ON users FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "Authenticated read-write users" ON users FOR ALL TO authenticated USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 DO $$ BEGIN
-    CREATE POLICY "Allow public read-write on employees" ON employees FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "Authenticated read-write employees" ON employees FOR ALL TO authenticated USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 DO $$ BEGIN
-    CREATE POLICY "Allow public read-write on attendance_logs" ON attendance_logs FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "Authenticated read-write attendance_logs" ON attendance_logs FOR ALL TO authenticated USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- 9. Storage Buckets (For Iqama Documents, Facial References, Punch Snapshots)
@@ -159,12 +166,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- 10. Initial Clean Super Admin Account
--- This allows you to log in on first launch and create your real projects.
-INSERT INTO users (id, email, password, role, project_id, full_name)
+-- Provision initial account structure without hardcoded passwords.
+INSERT INTO users (id, email, role, project_id, full_name)
 VALUES (
     '00000000-0000-0000-0000-000000000001',
     'admin@buildcorp.global',
-    'admin123',
     'SUPER_ADMIN',
     NULL,
     'System Administrator'
