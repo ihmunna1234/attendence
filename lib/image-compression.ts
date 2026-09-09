@@ -17,8 +17,8 @@ export async function compressImage(
   options: CompressionOptions = {}
 ): Promise<string> {
   const {
-    maxWidth = 800,
-    maxHeight = 800,
+    maxWidth = 600,
+    maxHeight = 600,
     quality = 0.75,
     mimeType = 'image/jpeg',
   } = options;
@@ -31,13 +31,19 @@ export async function compressImage(
     dataUrl = await readFileAsDataUrl(source);
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
 
     img.onload = () => {
       let width = img.width;
       let height = img.height;
+
+      // If already smaller than max dimensions and source is a string data URL, fast-return
+      if (width <= maxWidth && height <= maxHeight && typeof source === 'string' && source.length < 300000) {
+        resolve(source);
+        return;
+      }
 
       // Calculate constrained aspect ratio dimensions
       if (width > height) {
@@ -56,22 +62,26 @@ export async function compressImage(
       canvas.width = width;
       canvas.height = height;
 
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { alpha: false });
       if (!ctx) {
         resolve(dataUrl); // Fallback to raw if canvas unsupported
         return;
       }
 
-      // Smooth resizing
+      // Fast, high-quality image smoothing
       ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
+      ctx.imageSmoothingQuality = 'medium';
       ctx.drawImage(img, 0, 0, width, height);
 
       const compressedDataUrl = canvas.toDataURL(mimeType, quality);
       resolve(compressedDataUrl);
     };
 
-    img.onerror = (err) => reject(new Error('Failed to load image for compression: ' + err));
+    img.onerror = (err) => {
+      console.warn('Failed to load image for compression, returning original:', err);
+      resolve(dataUrl);
+    };
+
     img.src = dataUrl;
   });
 }
