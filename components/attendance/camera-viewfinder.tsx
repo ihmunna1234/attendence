@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Camera, RefreshCw, AlertCircle, CheckCircle2, Upload, Sparkles } from 'lucide-react';
+import { Camera, RefreshCw, AlertCircle, CheckCircle2, Upload, Loader2 } from 'lucide-react';
 import { compressImage } from '@/lib/image-compression';
 
 interface CameraViewfinderProps {
@@ -20,16 +20,20 @@ export function CameraViewfinder({
   guideText = 'Position face inside the oval guide',
 }: CameraViewfinderProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
-  const [flash, setFlash] = useState(false);
+  const [flash, setFlash] = useState<boolean>(false);
 
   // Play synthesized shutter sound via Web Audio API
   const playShutterSound = () => {
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
       const osc = ctx.createOscillator();
@@ -48,51 +52,87 @@ export function CameraViewfinder({
     }
   };
 
+  const stopCurrentStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
   const startCamera = useCallback(async () => {
     setCameraError(null);
+    setIsLoading(true);
+    stopCurrentStream();
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError('Webcam mediaDevices API is not supported in this browser.');
+      setIsLoading(false);
+      setIsCameraActive(false);
+      return;
+    }
+
+    let mediaStream: MediaStream | null = null;
+
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Webcam mediaDevices API is not supported in this browser.');
-      }
-
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
+      // Attempt 1: Fast & optimized resolution constraints
+      mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode,
-          width: { ideal: 640 },
-          height: { ideal: 480 },
+          facingMode: { ideal: facingMode },
+          width: { ideal: 640, max: 1280 },
+          height: { ideal: 480, max: 720 },
+          frameRate: { ideal: 30 },
         },
         audio: false,
       });
+    } catch (firstErr) {
+      console.warn('Optimized video constraint failed, attempting basic fallback:', firstErr);
+      try {
+        // Attempt 2: Basic video constraints fallback
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      } catch (fallbackErr: unknown) {
+        console.warn('Camera stream error:', fallbackErr);
+        const msg =
+          fallbackErr instanceof Error ? fallbackErr.message : 'Unable to access camera';
+        setCameraError(msg);
+        setIsCameraActive(false);
+        setIsLoading(false);
+        return;
+      }
+    }
 
-      setStream(mediaStream);
+    if (mediaStream) {
+      streamRef.current = mediaStream;
       setIsCameraActive(true);
 
       if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        videoRef.current.play();
+        const video = videoRef.current;
+        video.srcObject = mediaStream;
+        video.onloadedmetadata = () => {
+          video.play().catch(() => {});
+          setIsLoading(false);
+        };
+      } else {
+        setIsLoading(false);
       }
-    } catch (err: unknown) {
-      console.warn('Camera stream error:', err);
-      const msg = err instanceof Error ? err.message : 'Unable to access camera';
-      setCameraError(msg);
-      setIsCameraActive(false);
     }
-  }, [facingMode]);
+  }, [facingMode, stopCurrentStream]);
 
   useEffect(() => {
     if (!capturedImage) {
       startCamera();
+    } else {
+      stopCurrentStream();
+      setIsCameraActive(false);
+      setIsLoading(false);
     }
+
     return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
+      stopCurrentStream();
     };
-  }, [capturedImage, startCamera]);
+  }, [capturedImage, startCamera, stopCurrentStream]);
 
   const toggleCameraFacing = () => {
     setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
@@ -117,7 +157,7 @@ export function CameraViewfinder({
         ctx.scale(-1, 1);
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const rawDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      const rawDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
       const compressed = await compressImage(rawDataUrl, {
         maxWidth: 600,
@@ -158,6 +198,14 @@ export function CameraViewfinder({
       <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] bg-slate-900 rounded-3xl overflow-hidden border-2 border-slate-200 shadow-md flex items-center justify-center">
         {/* Flash Effect */}
         {flash && <div className="absolute inset-0 bg-white z-30 animate-out fade-out duration-200" />}
+
+        {/* Loading Spinner Overlay */}
+        {isLoading && !capturedImage && (
+          <div className="absolute inset-0 z-20 bg-slate-900/90 flex flex-col items-center justify-center space-y-2 text-white">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            <p className="text-xs font-semibold text-slate-300">Initializing camera feed...</p>
+          </div>
+        )}
 
         {capturedImage ? (
           /* Captured Preview */
@@ -225,7 +273,7 @@ export function CameraViewfinder({
             </div>
           </div>
         ) : (
-          /* Camera Unavailable / Fallback in clean bright container */
+          /* Camera Unavailable / Fallback */
           <div className="p-6 text-center space-y-4 max-w-sm bg-slate-50 rounded-2xl m-4 border border-slate-200">
             <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
               <AlertCircle className="w-6 h-6" />
